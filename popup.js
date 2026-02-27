@@ -3,16 +3,31 @@
  *
  * Shows a compact, live-updating view of API calls for the active tab.
  * Supports filtering, detail view, cURL/JSON copy, and Gist sharing.
+ *
+ * Entries are stored in the background service worker and reloaded
+ * every time the popup opens, so closing the popup never loses data.
+ *
+ * Opens as a full-page dashboard when loaded with ?fullpage=1.
  */
 (function () {
   'use strict';
+
+  // ── Full-page mode detection ──────────────────────────────────────
+
+  const params = new URLSearchParams(window.location.search);
+  const isFullPage = params.has('fullpage');
+  const paramTabId = params.get('tabId');
+
+  if (isFullPage) {
+    document.body.classList.add('fullpage');
+  }
 
   // ── State ─────────────────────────────────────────────────────────
 
   let entries = [];
   let selectedEntry = null;
   let recording = true;
-  let activeTabId = null;
+  let activeTabId = paramTabId ? parseInt(paramTabId, 10) : null;
   let port = null;
 
   // ── DOM refs ──────────────────────────────────────────────────────
@@ -40,11 +55,10 @@
   const dResHeaders = document.getElementById('dResHeaders');
   const dResBody = document.getElementById('dResBody');
 
-  // ── Init: get active tab and connect ──────────────────────────────
+  // ── Init ──────────────────────────────────────────────────────────
 
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (!tabs[0]) return;
-    activeTabId = tabs[0].id;
+  function init(tabId) {
+    activeTabId = tabId;
 
     // Ensure content script is injected
     chrome.runtime.sendMessage({ action: 'initPanel', tabId: activeTabId });
@@ -57,14 +71,25 @@
       }
     });
 
-    // Load existing logs
+    // Load existing logs from the background (survives popup close)
     chrome.runtime.sendMessage({ action: 'getLogs', tabId: activeTabId }, (res) => {
       if (res?.logs) {
         entries = res.logs;
         renderList();
       }
     });
-  });
+  }
+
+  if (activeTabId) {
+    // Full-page mode with explicit tabId
+    init(activeTabId);
+  } else {
+    // Popup mode — resolve from active tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs[0]) return;
+      init(tabs[0].id);
+    });
+  }
 
   // ── Entry management ──────────────────────────────────────────────
 
@@ -174,10 +199,12 @@
   // ── Recording toggle ──────────────────────────────────────────────
 
   const btnRecord = document.getElementById('btnToggleRecord');
+  const recordLabel = document.getElementById('recordLabel');
   btnRecord.addEventListener('click', () => {
     recording = !recording;
     btnRecord.classList.toggle('paused', !recording);
     liveIndicator.classList.toggle('paused', !recording);
+    recordLabel.textContent = recording ? 'Recording' : 'Paused';
     btnRecord.title = recording ? 'Pause recording' : 'Resume recording';
   });
 
@@ -201,6 +228,16 @@
     const filtered = getFilteredEntries();
     copyToClipboard(JSON.stringify(filtered, null, 2));
     showToast(`Copied ${filtered.length} entries as JSON`, 'success');
+  });
+
+  // ── Full-page dashboard ───────────────────────────────────────────
+
+  document.getElementById('btnFullPage').addEventListener('click', () => {
+    const tabId = activeTabId || 0;
+    const url = chrome.runtime.getURL(`popup.html?fullpage&tabId=${tabId}`);
+    chrome.tabs.create({ url });
+    // Close the popup after opening the full-page tab
+    window.close();
   });
 
   // ── Settings ──────────────────────────────────────────────────────
@@ -246,8 +283,9 @@
 
     const btn = document.getElementById('btnShareGist');
     btn.disabled = true;
-    const origText = btn.textContent;
-    btn.textContent = 'Creating...';
+    const label = btn.querySelector('.btn-label');
+    const origText = label.textContent;
+    label.textContent = 'Creating...';
 
     try {
       const { githubPat } = await chrome.storage.local.get('githubPat');
@@ -286,7 +324,7 @@
       showToast(`Gist failed: ${err.message}`, 'error');
     } finally {
       btn.disabled = false;
-      btn.textContent = origText;
+      label.textContent = origText;
     }
   });
 

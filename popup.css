@@ -22,7 +22,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-  width: 460px;
+  width: 480px;
   min-height: 520px;
   max-height: 600px;
   font-family: var(--font-ui);
@@ -34,21 +34,45 @@ html, body {
   flex-direction: column;
 }
 
+/* ── Full-page mode ────────────────────────────────────────────────── */
+body.fullpage {
+  width: 100vw;
+  min-height: 100vh;
+  max-height: none;
+}
+
+body.fullpage #listView {
+  max-height: none;
+}
+
+body.fullpage .section pre {
+  max-height: 500px;
+}
+
+body.fullpage #emptyState {
+  min-height: 400px;
+}
+
 /* ── Header ────────────────────────────────────────────────────────── */
 #header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  gap: 6px;
 }
 
 .header-left, .header-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+
+.header-right {
+  gap: 2px;
 }
 
 .logo {
@@ -86,33 +110,78 @@ html, body {
   animation: none;
 }
 
-.icon-btn {
-  width: 28px;
-  height: 28px;
-  border: none;
+/* ── Toolbar buttons (icon + label) ────────────────────────────────── */
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: var(--text-dim);
-  font-size: 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
 
-.icon-btn:hover {
+.toolbar-btn:hover {
   background: var(--bg-hover);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.toolbar-btn:active {
+  background: var(--bg-selected);
+}
+
+.toolbar-btn .btn-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.toolbar-btn .btn-label {
+  line-height: 1;
+}
+
+/* Recording state */
+.toolbar-btn.recording {
+  color: var(--red);
+}
+
+.toolbar-btn.recording:hover {
+  color: var(--red);
+  background: rgba(243, 139, 168, 0.1);
+}
+
+.toolbar-btn.recording.paused {
+  color: var(--text-dim);
+}
+
+.toolbar-btn.recording.paused:hover {
   color: var(--text);
 }
 
-.icon-btn.recording {
-  color: var(--red);
-  font-size: 16px;
+/* Accent variant (Share Gist) */
+.toolbar-btn.btn-accent {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: 600;
 }
 
-.icon-btn.recording.paused {
-  color: var(--text-dim);
+.toolbar-btn.btn-accent:hover {
+  opacity: 0.85;
+  color: var(--bg);
+}
+
+.toolbar-btn.btn-accent:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* ── Filter bar ────────────────────────────────────────────────────── */
@@ -165,10 +234,9 @@ html, body {
   min-height: 300px;
   color: var(--text-dim);
   text-align: center;
-  gap: 6px;
+  gap: 8px;
 }
 
-#emptyState .empty-icon { font-size: 32px; opacity: 0.4; }
 #emptyState .hint { font-size: 11px; }
 
 #requestList {
@@ -269,7 +337,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 5px 8px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -277,30 +345,8 @@ html, body {
 
 #detailBtns {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
-
-.btn-sm {
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.1s, border-color 0.1s;
-}
-
-.btn-sm:hover { background: var(--bg-hover); border-color: var(--accent); }
-
-.btn-accent {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
-}
-
-.btn-accent:hover { opacity: 0.85; }
 
 #detailSummary {
   display: flex;
@@ -364,11 +410,11 @@ html, body {
 }
 
 .section summary::before {
-  content: '▸ ';
+  content: '\25B8  ';
 }
 
 .section[open] summary::before {
-  content: '▾ ';
+  content: '\25BE  ';
 }
 
 .section summary:hover { color: var(--text); }
