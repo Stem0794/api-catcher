@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>API Catcher — Settings</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-surface: #262637;
+      --border: #3a3a55;
+      --text: #cdd6f4;
+      --text-dim: #8888aa;
+      --accent: #89b4fa;
+      --green: #a6e3a1;
+      --red: #f38ba8;
+      --radius: 8px;
+      --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="password"],
+    input[type="text"] {
+      flex: 1;
+      padding: 9px 12px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover { opacity: 0.85; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-danger {
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+    }
+
+    .btn-danger:hover {
+      background: rgba(243, 139, 168, 0.1);
+    }
+
+    .toggle-vis {
+      padding: 9px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .status-msg {
+      margin-top: 12px;
+      font-size: 13px;
+      min-height: 20px;
+    }
+
+    .status-msg.success { color: var(--green); }
+    .status-msg.error   { color: var(--red); }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .info-box {
+      background: rgba(137, 180, 250, 0.08);
+      border: 1px solid rgba(137, 180, 250, 0.2);
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .info-box strong {
+      color: var(--accent);
+    }
+
+    .info-box code {
+      background: var(--bg);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .info-box ol {
+      margin: 8px 0 0 18px;
+    }
+
+    .info-box li {
+      margin-bottom: 4px;
+    }
+
+    .token-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot.active   { background: var(--green); }
+    .dot.inactive { background: var(--text-dim); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>API Catcher Settings</h1>
+    <p class="subtitle">Configure your extension preferences and authentication.</p>
+
+    <!-- Token status -->
+    <div class="card">
+      <h2>GitHub Personal Access Token</h2>
+      <p>
+        Required for the <strong>Share via Gist</strong> feature. Your token is stored locally
+        in <code>chrome.storage.local</code> and never sent anywhere except the GitHub API.
+      </p>
+
+      <div class="token-status">
+        <span id="statusDot" class="dot inactive"></span>
+        <span id="statusLabel">No token configured</span>
+      </div>
+
+      <label for="patInput">Personal Access Token</label>
+      <div class="input-group">
+        <input type="password" id="patInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false" />
+        <button class="toggle-vis" id="toggleVis" title="Toggle visibility">&#128065;</button>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnSave">Save Token</button>
+        <button class="btn btn-danger" id="btnRemove">Remove Token</button>
+      </div>
+
+      <div id="statusMsg" class="status-msg"></div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="card">
+      <h2>How to generate your GitHub PAT</h2>
+      <div class="info-box">
+        <ol>
+          <li>Go to <strong>GitHub &rarr; Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Fine-grained tokens</strong> (or use <strong>Tokens (classic)</strong>).</li>
+          <li>Click <strong>"Generate new token"</strong>.</li>
+          <li>
+            <strong>Required scope (Classic token):</strong> select only <code>gist</code>.<br>
+            <strong>Required permission (Fine-grained token):</strong> under <strong>Account permissions</strong>, set <strong>Gists</strong> to <code>Read and write</code>.
+          </li>
+          <li>Set an expiration date that suits your workflow.</li>
+          <li>Click <strong>"Generate token"</strong>, copy it, and paste it above.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

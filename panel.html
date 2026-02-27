@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>API Catcher</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <!-- ── Toolbar ─────────────────────────────────────────────────── -->
+  <header id="toolbar">
+    <div class="toolbar-left">
+      <span class="logo">API Catcher</span>
+      <span id="entryCount" class="badge">0</span>
+    </div>
+    <div class="toolbar-right">
+      <input type="text" id="filterInput" placeholder="Filter by URL or method..." />
+      <select id="methodFilter">
+        <option value="">All Methods</option>
+        <option>GET</option>
+        <option>POST</option>
+        <option>PUT</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+        <option>OPTIONS</option>
+        <option>HEAD</option>
+      </select>
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="2xx">2xx Success</option>
+        <option value="3xx">3xx Redirect</option>
+        <option value="4xx">4xx Client Error</option>
+        <option value="5xx">5xx Server Error</option>
+        <option value="0">Failed / 0</option>
+      </select>
+      <button id="btnClear" class="btn btn-danger" title="Clear all logs">Clear</button>
+      <button id="btnExportAll" class="btn btn-primary" title="Export all visible logs as JSON">Export All</button>
+    </div>
+  </header>
+
+  <!-- ── Split view: List + Detail ───────────────────────────────── -->
+  <main id="splitView">
+    <!-- List panel -->
+    <section id="listPanel">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th class="col-status">Status</th>
+            <th class="col-method">Method</th>
+            <th class="col-url">URL</th>
+            <th class="col-type">Type</th>
+            <th class="col-duration">Time</th>
+            <th class="col-timestamp">Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+      <div id="emptyState">
+        <p>No API calls captured yet.</p>
+        <p class="hint">Navigate or interact with the page to see requests here.</p>
+      </div>
+    </section>
+
+    <!-- Resize handle -->
+    <div id="resizeHandle"></div>
+
+    <!-- Detail panel -->
+    <section id="detailPanel" class="hidden">
+      <div id="detailHeader">
+        <div id="detailTitle">
+          <span id="detailMethod" class="method-badge">GET</span>
+          <span id="detailUrl"></span>
+        </div>
+        <div id="detailActions">
+          <button id="btnCopyCurl" class="btn btn-sm" title="Copy as cURL command">Copy cURL</button>
+          <button id="btnCopyJson" class="btn btn-sm" title="Copy entry as JSON">Copy JSON</button>
+          <button id="btnShareGist" class="btn btn-sm btn-primary" title="Create a secret GitHub Gist and copy link">Share via Gist</button>
+          <button id="btnCloseDetail" class="btn btn-sm" title="Close detail view">&times;</button>
+        </div>
+      </div>
+      <div id="detailMeta">
+        <span id="detailStatus"></span>
+        <span id="detailDuration"></span>
+        <span id="detailTimestamp"></span>
+        <span id="detailType"></span>
+      </div>
+      <div id="detailBody">
+        <div class="detail-section">
+          <h3 class="section-toggle" data-target="reqHeaders">Request Headers <span class="chevron">&#9662;</span></h3>
+          <pre id="reqHeaders" class="collapsed"></pre>
+        </div>
+        <div class="detail-section">
+          <h3 class="section-toggle" data-target="reqBody">Request Body <span class="chevron">&#9662;</span></h3>
+          <pre id="reqBody" class="collapsed"></pre>
+        </div>
+        <div class="detail-section">
+          <h3 class="section-toggle" data-target="resHeaders">Response Headers <span class="chevron">&#9662;</span></h3>
+          <pre id="resHeaders" class="collapsed"></pre>
+        </div>
+        <div class="detail-section">
+          <h3 class="section-toggle" data-target="resBody">Response Body <span class="chevron">&#9662;</span></h3>
+          <pre id="resBody"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="panel.js"></script>
+</body>
+</html>
