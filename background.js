@@ -2,18 +2,68 @@
  * background.js — Service worker that manages state and injects content scripts.
  *
  * - Maintains a per-tab log of captured API calls.
+ * - Persists logs in chrome.storage.session so they survive service worker restarts.
  * - Injects content scripts on tab navigation.
- * - Provides the log data to the DevTools panel on request.
+ * - Provides the log data to the DevTools panel and popup on request.
+ * - Deduplicates entries by ID to prevent double-logging.
  */
 'use strict';
 
-// tabId → Array<ApiEntry>
-const tabLogs = new Map();
+// ── Storage helpers ───────────────────────────────────────────────────
+// chrome.storage.session survives service worker restarts but clears
+// when the browser session ends — perfect for transient QA logs.
+
+const STORAGE_KEY = 'tabLogs';
+
+async function loadLogs() {
+  const data = await chrome.storage.session.get(STORAGE_KEY);
+  return data[STORAGE_KEY] || {};
+}
+
+async function saveLogs(logs) {
+  await chrome.storage.session.set({ [STORAGE_KEY]: logs });
+}
+
+async function getTabLogs(tabId) {
+  const all = await loadLogs();
+  return all[String(tabId)] || [];
+}
+
+async function appendEntry(tabId, entry) {
+  const all = await loadLogs();
+  const key = String(tabId);
+  if (!all[key]) all[key] = [];
+
+  // Deduplicate by entry ID
+  if (all[key].some((e) => e.id === entry.id)) return false;
+
+  all[key].push(entry);
+  await saveLogs(all);
+  return true;
+}
+
+async function clearTabLogs(tabId) {
+  const all = await loadLogs();
+  delete all[String(tabId)];
+  await saveLogs(all);
+}
+
+async function deleteTabFromStorage(tabId) {
+  const all = await loadLogs();
+  delete all[String(tabId)];
+  await saveLogs(all);
+}
+
+// Raise the quota so large payloads don't get silently dropped.
+// session storage allows up to ~10 MB; QUOTA_BYTES_PER_ITEM is 8192 by
+// default but can be increased for session storage.
+chrome.storage.session.setAccessLevel?.({
+  accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS',
+}).catch(() => {});
 
 // ── Content-script injection on navigation ────────────────────────────
 
 chrome.webNavigation?.onCommitted.addListener(async (details) => {
-  // Only inject into top-level frames, skip chrome:// and edge:// etc.
   if (details.frameId !== 0) return;
   const url = details.url || '';
   if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:')) return;
@@ -29,8 +79,6 @@ chrome.webNavigation?.onCommitted.addListener(async (details) => {
   }
 });
 
-// Also inject when the DevTools panel connects for the first time
-// (covers the case where the page was already loaded before opening DevTools)
 async function ensureInjected(tabId) {
   try {
     const url = (await chrome.tabs.get(tabId))?.url || '';
@@ -50,24 +98,26 @@ async function ensureInjected(tabId) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'apiLog' && sender.tab) {
     const tabId = sender.tab.id;
-    if (!tabLogs.has(tabId)) tabLogs.set(tabId, []);
-    tabLogs.get(tabId).push(msg.payload);
-
-    // Broadcast to any connected DevTools panels or popups for this tab
-    broadcastToPanel(tabId, { action: 'newEntry', payload: msg.payload });
-    broadcastToPopup(tabId, { action: 'newEntry', payload: msg.payload });
+    appendEntry(tabId, msg.payload).then((added) => {
+      if (added) {
+        broadcastToPanel(tabId, { action: 'newEntry', payload: msg.payload });
+        broadcastToPopup(tabId, { action: 'newEntry', payload: msg.payload });
+      }
+    });
     return;
   }
 
   if (msg.action === 'getLogs') {
-    const logs = tabLogs.get(msg.tabId) || [];
-    sendResponse({ logs });
-    return true;
+    getTabLogs(msg.tabId).then((logs) => {
+      sendResponse({ logs });
+    });
+    return true; // async sendResponse
   }
 
   if (msg.action === 'clearLogs') {
-    tabLogs.set(msg.tabId, []);
-    sendResponse({ ok: true });
+    clearTabLogs(msg.tabId).then(() => {
+      sendResponse({ ok: true });
+    });
     return true;
   }
 
@@ -77,13 +127,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// ── Panel communication via long-lived connections ────────────────────
+// ── Panel / popup communication via long-lived connections ────────────
 
 const panelPorts = new Map(); // tabId → Set<Port>
 const popupPorts = new Map(); // tabId → Set<Port>
 
 chrome.runtime.onConnect.addListener((port) => {
-  // Determine which map to register the port in
   let targetMap = null;
   let tabId = null;
 
@@ -128,7 +177,7 @@ function broadcastToPopup(tabId, message) {
 // ── Cleanup on tab close ──────────────────────────────────────────────
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  tabLogs.delete(tabId);
+  deleteTabFromStorage(tabId);
   panelPorts.delete(tabId);
   popupPorts.delete(tabId);
 });

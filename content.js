@@ -5,9 +5,16 @@
  *    monkey-patch fetch/XHR.
  * 2. Listens for postMessage events from the interceptor and forwards
  *    them to the background service worker via chrome.runtime.sendMessage.
+ *
+ * Guards against multiple injections — chrome.scripting.executeScript may
+ * run this file more than once per page (navigation + initPanel).
  */
 (function () {
   'use strict';
+
+  // Prevent duplicate listeners when content.js is injected more than once
+  if (window.__apiCatcherContentInjected) return;
+  window.__apiCatcherContentInjected = true;
 
   // Inject the interceptor script into the page's MAIN world
   const script = document.createElement('script');

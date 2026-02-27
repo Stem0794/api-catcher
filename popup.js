@@ -294,8 +294,10 @@
         return;
       }
 
+      // Sanitize before sharing — redacts tokens, secrets, etc.
+      const sanitized = sanitizePayload(selectedEntry);
       const filename = `api-catcher-${selectedEntry.method}-${Date.now()}.json`;
-      const content = JSON.stringify(selectedEntry, null, 2);
+      const content = JSON.stringify(sanitized, null, 2);
 
       const response = await fetch('https://api.github.com/gists', {
         method: 'POST',
