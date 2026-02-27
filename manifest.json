@@ -7,8 +7,19 @@
     "storage",
     "clipboardWrite",
     "scripting",
-    "webNavigation"
+    "webNavigation",
+    "activeTab",
+    "tabs"
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "API Catcher"
+  },
   "host_permissions": [
     "<all_urls>"
   ],

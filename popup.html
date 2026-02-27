@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>API Catcher</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- ── Header ────────────────────────────────────────────────────── -->
+  <header id="header">
+    <div class="header-left">
+      <span class="logo">API Catcher</span>
+      <span id="entryCount" class="badge">0</span>
+      <span id="liveIndicator" class="live-dot" title="Listening for requests"></span>
+    </div>
+    <div class="header-right">
+      <button id="btnToggleRecord" class="icon-btn recording" title="Toggle recording">&#9679;</button>
+      <button id="btnClear" class="icon-btn" title="Clear all logs">&#128465;</button>
+      <button id="btnExportAll" class="icon-btn" title="Export all as JSON">&#128230;</button>
+      <button id="btnSettings" class="icon-btn" title="Open settings">&#9881;</button>
+    </div>
+  </header>
+
+  <!-- ── Filter bar ────────────────────────────────────────────────── -->
+  <div id="filterBar">
+    <input type="text" id="filterInput" placeholder="Filter by URL..." />
+    <select id="methodFilter">
+      <option value="">All</option>
+      <option>GET</option>
+      <option>POST</option>
+      <option>PUT</option>
+      <option>PATCH</option>
+      <option>DELETE</option>
+    </select>
+    <select id="statusFilter">
+      <option value="">Status</option>
+      <option value="2xx">2xx</option>
+      <option value="3xx">3xx</option>
+      <option value="4xx">4xx</option>
+      <option value="5xx">5xx</option>
+      <option value="0">Err</option>
+    </select>
+  </div>
+
+  <!-- ── Request list ──────────────────────────────────────────────── -->
+  <div id="listView">
+    <div id="emptyState">
+      <div class="empty-icon">&#128225;</div>
+      <p>No API calls captured yet</p>
+      <p class="hint">Interact with the page to see requests</p>
+    </div>
+    <ul id="requestList"></ul>
+  </div>
+
+  <!-- ── Detail view (shown when a request is selected) ────────────── -->
+  <div id="detailView" class="hidden">
+    <div id="detailNav">
+      <button id="btnBack" class="icon-btn" title="Back to list">&#8592; Back</button>
+      <div id="detailBtns">
+        <button id="btnCopyCurl" class="btn-sm" title="Copy as cURL">cURL</button>
+        <button id="btnCopyJson" class="btn-sm" title="Copy as JSON">JSON</button>
+        <button id="btnShareGist" class="btn-sm btn-accent" title="Share via GitHub Gist">Gist</button>
+      </div>
+    </div>
+
+    <div id="detailSummary">
+      <span id="dMethod" class="method-badge">GET</span>
+      <span id="dStatus" class="status-pill">200</span>
+      <span id="dDuration" class="meta-chip"></span>
+      <span id="dType" class="meta-chip"></span>
+    </div>
+    <div id="dUrl" class="detail-url"></div>
+    <div id="dTimestamp" class="detail-timestamp"></div>
+
+    <div class="detail-sections">
+      <details class="section">
+        <summary>Request Headers</summary>
+        <pre id="dReqHeaders"></pre>
+      </details>
+      <details class="section">
+        <summary>Request Body</summary>
+        <pre id="dReqBody"></pre>
+      </details>
+      <details class="section" open>
+        <summary>Response Headers</summary>
+        <pre id="dResHeaders"></pre>
+      </details>
+      <details class="section" open>
+        <summary>Response Body</summary>
+        <pre id="dResBody"></pre>
+      </details>
+    </div>
+  </div>
+
+  <!-- ── Toast ─────────────────────────────────────────────────────── -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

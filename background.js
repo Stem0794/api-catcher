@@ -53,8 +53,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!tabLogs.has(tabId)) tabLogs.set(tabId, []);
     tabLogs.get(tabId).push(msg.payload);
 
-    // Broadcast to any connected DevTools panels for this tab
+    // Broadcast to any connected DevTools panels or popups for this tab
     broadcastToPanel(tabId, { action: 'newEntry', payload: msg.payload });
+    broadcastToPopup(tabId, { action: 'newEntry', payload: msg.payload });
     return;
   }
 
@@ -79,20 +80,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // ── Panel communication via long-lived connections ────────────────────
 
 const panelPorts = new Map(); // tabId → Set<Port>
+const popupPorts = new Map(); // tabId → Set<Port>
 
 chrome.runtime.onConnect.addListener((port) => {
-  if (!port.name.startsWith('panel-')) return;
-  const tabId = parseInt(port.name.replace('panel-', ''), 10);
-  if (isNaN(tabId)) return;
+  // Determine which map to register the port in
+  let targetMap = null;
+  let tabId = null;
 
-  if (!panelPorts.has(tabId)) panelPorts.set(tabId, new Set());
-  panelPorts.get(tabId).add(port);
+  if (port.name.startsWith('panel-')) {
+    tabId = parseInt(port.name.replace('panel-', ''), 10);
+    targetMap = panelPorts;
+  } else if (port.name.startsWith('popup-')) {
+    tabId = parseInt(port.name.replace('popup-', ''), 10);
+    targetMap = popupPorts;
+  }
+
+  if (!targetMap || isNaN(tabId)) return;
+
+  if (!targetMap.has(tabId)) targetMap.set(tabId, new Set());
+  targetMap.get(tabId).add(port);
 
   port.onDisconnect.addListener(() => {
-    const set = panelPorts.get(tabId);
+    const set = targetMap.get(tabId);
     if (set) {
       set.delete(port);
-      if (set.size === 0) panelPorts.delete(tabId);
+      if (set.size === 0) targetMap.delete(tabId);
     }
   });
 });
@@ -105,9 +117,18 @@ function broadcastToPanel(tabId, message) {
   }
 }
 
+function broadcastToPopup(tabId, message) {
+  const ports = popupPorts.get(tabId);
+  if (!ports) return;
+  for (const port of ports) {
+    try { port.postMessage(message); } catch { /* port closed */ }
+  }
+}
+
 // ── Cleanup on tab close ──────────────────────────────────────────────
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabLogs.delete(tabId);
   panelPorts.delete(tabId);
+  popupPorts.delete(tabId);
 });
