@@ -310,6 +310,42 @@ select {
   border-bottom: 1px solid var(--border);
 }
 
+#detailInitiator {
+  padding: 8px 14px;
+  font-size: 11.5px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(137, 180, 250, 0.05);
+  min-width: 0;
+}
+
+#detailInitiator:empty {
+  display: none;
+}
+
+.context-label {
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.context-link {
+  color: var(--accent);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-link:hover {
+  text-decoration: underline;
+}
+
 #detailBody {
   padding: 10px 14px;
 }

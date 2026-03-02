@@ -66,6 +66,10 @@
 
     const timestamp = new Date().toISOString();
     const startTime = performance.now();
+    const initiator = {
+      url: window.location.href,
+      title: document.title,
+    };
 
     try {
       const response = await originalFetch.apply(this, args);
@@ -88,6 +92,7 @@
         statusText: response.statusText,
         timestamp,
         duration,
+        initiator,
         request: { headers: reqHeaders, body: reqBody },
         response: { headers: resHeaders, body: resBody },
       });
@@ -104,6 +109,7 @@
         statusText: 'Network Error',
         timestamp,
         duration,
+        initiator,
         request: { headers: reqHeaders, body: reqBody },
         response: { headers: {}, body: null },
         error: err.message,
@@ -142,6 +148,10 @@
       meta.startTime = performance.now();
       meta.reqBody = typeof body === 'string' ? body : safeStringify(body);
       meta.timestamp = new Date().toISOString();
+      meta.initiator = {
+        url: window.location.href,
+        title: document.title,
+      };
 
       this.addEventListener('loadend', function () {
         const duration = Math.round(performance.now() - meta.startTime);
@@ -163,6 +173,7 @@
           statusText: this.statusText,
           timestamp: meta.timestamp,
           duration,
+          initiator: meta.initiator,
           request: { headers: meta.reqHeaders, body: meta.reqBody },
           response: { headers: resHeaders, body: this.responseText },
         });

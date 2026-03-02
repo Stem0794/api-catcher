@@ -10,6 +10,12 @@
 // tabId → Array<ApiEntry>
 const tabLogs = new Map();
 
+// ── Side panel configuration ──────────────────────────────────────────
+
+if (chrome.sidePanel) {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+}
+
 // ── Content-script injection on navigation ────────────────────────────
 
 chrome.webNavigation?.onCommitted.addListener(async (details) => {
