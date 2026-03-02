@@ -23,9 +23,9 @@
 
 html, body {
   width: 800px;
-  height: 600px;
+  height: 100vh;
   max-width: 100%;
-  max-height: 100%;
+  max-height: 100vh;
   min-width: 320px;
   min-height: 520px;
   font-family: var(--font-ui);
@@ -470,6 +470,74 @@ body.fullpage #emptyState {
   border: none;
   border-top: 1px solid var(--border);
   border-radius: 0;
+}
+
+/* ── Responsive adjustments (Side Panel) ─────────────────────────── */
+
+@media (max-width: 500px) {
+  .toolbar-btn .btn-label {
+    display: none;
+  }
+  
+  .toolbar-btn {
+    padding: 6px;
+  }
+
+  .logo {
+    font-size: 12px;
+  }
+
+  #filterBar {
+    padding: 4px 6px;
+    gap: 2px;
+  }
+
+  #filterInput {
+    min-width: 0;
+  }
+
+  .req-item {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .req-item .method-badge {
+    width: 40px;
+    font-size: 9px;
+  }
+
+  .req-item .status-col {
+    width: 24px;
+    font-size: 10px;
+  }
+
+  .req-item .time-col {
+    width: 45px;
+    font-size: 9px;
+  }
+
+  .req-item .duration-col {
+    display: none; /* Hide duration on very narrow screens */
+  }
+
+  #detailSummary {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .meta-chip {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .req-item .time-col {
+    display: none; /* Hide time as well if extremely narrow */
+  }
+  
+  .logo {
+    display: none; /* Just show the icon/badge if no space */
+  }
 }
 
 /* ── Toast ──────────────────────────────────────────────────────────── */

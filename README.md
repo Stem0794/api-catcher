@@ -6,6 +6,7 @@ A Manifest V3 Chrome extension for QA testers to monitor, log, and securely shar
 
 - **Network Interception** — Captures all XHR and Fetch requests with full details (method, URL, status, headers, body, timing)
 - **Side Panel Support** — Opens in the browser's native side panel (sidebar) for persistent, easy access while browsing
+- **Responsive Layout** — Optimized for any width, with auto-hiding labels and horizontal scrolling for long headers
 - **Initiator Context** — Tracks the page URL and title where each request originated, identifying the exact source of every API call
 - **DevTools Panel** — Clean, dark-themed UI integrated into Chrome DevTools with filtering, color-coded statuses, and a resizable split view
 - **Copy as cURL / JSON** — One-click export of any request for debugging or sharing
@@ -75,11 +76,13 @@ api-catcher/
 
 ### Viewing Requests
 
-- Open the **API Catcher** tab in DevTools.
+- Click the **API Catcher icon** to open the **Side Panel** (sidebar).
+- Open the **API Catcher** tab in DevTools for a wider view.
+- Both views automatically follow your active tab as you browse.
 - All XHR and Fetch requests from the inspected page will stream in automatically.
 - Use the **filter bar** to search by URL or method.
 - Use the **Method** and **Status** dropdowns to narrow results.
-- Click any row to open the **Detail View** on the right.
+- Click any row to open the **Detail View**.
 
 ### Detail View
 
@@ -120,11 +123,8 @@ API Catcher provides both for maximum flexibility:
 1. **Side Panel (Sidebar)** — Best for persistent monitoring while you interact with the page. It stays open as you browse and doesn't clutter your workspace.
 2. **DevTools Panel** — Best for deep analysis of large JSON payloads or when you need to see Network/Console logs side-by-side with API Catcher.
 
-A DevTools panel was originally chosen because:
-1. **Natural workflow** — QA testers already live in DevTools when debugging.
-2. **Larger viewport** — DevTools panels have more screen real estate than a side panel.
-3. **Per-tab isolation** — DevTools panels are inherently scoped to the inspected tab.
-...
+The monitor is fully responsive, automatically adjusting its layout for narrow sidebars by hiding labels and providing horizontal scrolling for long header values.
+
 ### Security Considerations
 
 - The GitHub PAT is stored in `chrome.storage.local`, which is encrypted at rest by Chrome and is only accessible to this extension.
