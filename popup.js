@@ -50,6 +50,7 @@
   const dType = document.getElementById('dType');
   const dUrl = document.getElementById('dUrl');
   const dTimestamp = document.getElementById('dTimestamp');
+  const dInitiator = document.getElementById('dInitiator');
   const dReqHeaders = document.getElementById('dReqHeaders');
   const dReqBody = document.getElementById('dReqBody');
   const dResHeaders = document.getElementById('dResHeaders');
@@ -84,10 +85,16 @@
     // Full-page mode with explicit tabId
     init(activeTabId);
   } else {
-    // Popup mode — resolve from active tab
+    // Sidebar / Popup mode — resolve from active tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (!tabs[0]) return;
       init(tabs[0].id);
+    });
+
+    // Automatically follow tab switching (sidebar behavior)
+    chrome.tabs.onActivated.addListener((activeInfo) => {
+      if (port) port.disconnect();
+      init(activeInfo.tabId);
     });
   }
 
@@ -183,6 +190,17 @@
     dUrl.textContent = entry.url;
     dTimestamp.textContent = entry.timestamp;
 
+    if (entry.initiator) {
+      dInitiator.innerHTML = `
+        <span class="context-label">Initiated from:</span>
+        <a href="${escapeHtml(entry.initiator.url)}" target="_blank" class="context-link" title="${escapeHtml(entry.initiator.url)}">
+          ${escapeHtml(entry.initiator.title || entry.initiator.url)}
+        </a>
+      `;
+    } else {
+      dInitiator.innerHTML = '';
+    }
+
     dReqHeaders.textContent = prettyJson(entry.request?.headers);
     dReqBody.textContent = prettyBody(entry.request?.body);
     dResHeaders.textContent = prettyJson(entry.response?.headers);
@@ -264,7 +282,12 @@
       parts.push(`-d '${body.replace(/'/g, "'\\''")}'`);
     }
 
-    copyToClipboard(parts.join(' \\\n  '));
+    let curl = parts.join(' \\\n  ');
+    if (e.initiator) {
+      curl = `# Initiated from: ${e.initiator.title} (${e.initiator.url})\n${curl}`;
+    }
+
+    copyToClipboard(curl);
     showToast('Copied as cURL', 'success');
   });
 
@@ -308,7 +331,7 @@
           'X-GitHub-Api-Version': '2022-11-28',
         },
         body: JSON.stringify({
-          description: `API Catcher: ${selectedEntry.method} ${truncateUrl(selectedEntry.url, 60)}`,
+          description: `API Catcher: ${selectedEntry.method} ${truncateUrl(selectedEntry.url, 60)} (Page: ${selectedEntry.initiator?.title || 'unknown'})`,
           public: false,
           files: { [filename]: { content } },
         }),

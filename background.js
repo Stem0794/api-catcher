@@ -75,6 +75,12 @@ chrome.storage.session.setAccessLevel?.({
   accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS',
 }).catch(() => {});
 
+// ── Side panel configuration ──────────────────────────────────────────
+
+if (chrome.sidePanel) {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+}
+
 // ── Content-script injection on navigation ────────────────────────────
 
 chrome.webNavigation?.onCommitted.addListener(async (details) => {

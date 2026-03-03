@@ -5,6 +5,9 @@ A Manifest V3 Chrome extension for QA testers to monitor, log, and securely shar
 ## Features
 
 - **Network Interception** — Captures all XHR and Fetch requests with full details (method, URL, status, headers, body, timing)
+- **Side Panel Support** — Opens in the browser's native side panel (sidebar) for persistent, easy access while browsing
+- **Responsive Layout** — Optimized for any width, with auto-hiding labels and horizontal scrolling for long headers
+- **Initiator Context** — Tracks the page URL and title where each request originated, identifying the exact source of every API call
 - **DevTools Panel** — Clean, dark-themed UI integrated into Chrome DevTools with filtering, color-coded statuses, and a resizable split view
 - **Copy as cURL / JSON** — One-click export of any request for debugging or sharing
 - **GitHub Gist Sharing** — Create a secret Gist from any captured request and auto-copy the shareable link
@@ -42,12 +45,12 @@ api-catcher/
 4. Click **"Load unpacked"** and select the `api-catcher/` directory.
 5. The extension will appear in your extensions list with the name **"API Catcher"**.
 
-### 2. Open the DevTools Panel
+### 2. Open the Monitor
 
 1. Navigate to any website (e.g., `https://jsonplaceholder.typicode.com`).
-2. Open Chrome DevTools (`F12` or `Ctrl+Shift+I` / `Cmd+Option+I`).
-3. Look for the **"API Catcher"** tab in the DevTools panel bar (it may be behind the `>>` overflow menu).
-4. Interact with the page — any XHR or Fetch calls will appear in real time.
+2. **Click the API Catcher icon** in your extensions bar — this opens the **Side Panel** (sidebar) to start monitoring immediately.
+3. Alternatively, open **Chrome DevTools** (`F12` or `Ctrl+Shift+I` / `Cmd+Option+I`) and look for the **"API Catcher"** tab.
+4. Interact with the page — any XHR or Fetch calls will appear in real time in both the monitor window and DevTools.
 
 ### 3. Configure GitHub PAT (for Gist Sharing)
 
@@ -73,17 +76,20 @@ api-catcher/
 
 ### Viewing Requests
 
-- Open the **API Catcher** tab in DevTools.
+- Click the **API Catcher icon** to open the **Side Panel** (sidebar).
+- Open the **API Catcher** tab in DevTools for a wider view.
+- Both views automatically follow your active tab as you browse.
 - All XHR and Fetch requests from the inspected page will stream in automatically.
 - Use the **filter bar** to search by URL or method.
 - Use the **Method** and **Status** dropdowns to narrow results.
-- Click any row to open the **Detail View** on the right.
+- Click any row to open the **Detail View**.
 
 ### Detail View
 
 The detail panel shows:
 - Full URL with method badge
 - Status code, duration, and timestamp
+- **Initiator Context** — The page title and URL where the request originated
 - Collapsible sections for **Request Headers**, **Request Body**, **Response Headers**, and **Response Body**
 - JSON payloads are automatically pretty-printed
 
@@ -110,15 +116,14 @@ Methods are also color-coded: GET (blue), POST (green), PUT (yellow), PATCH (ora
 
 ## Architecture Decisions
 
-### Why a DevTools Panel instead of a Side Panel?
+### Why a DevTools Panel and a Side Panel?
 
-A **DevTools panel** was chosen over a Side Panel for the following reasons:
+API Catcher provides both for maximum flexibility:
 
-1. **Natural workflow** — QA testers already live in DevTools when debugging. Adding a tab next to Network/Console keeps everything in one place.
-2. **Larger viewport** — DevTools panels have significantly more screen real estate than a side panel, which is critical for viewing JSON payloads and headers.
-3. **Per-tab isolation** — DevTools panels are inherently scoped to the inspected tab, which matches the requirement of logging per-tab activity. A side panel would require manual tab-tracking logic.
-4. **No interference with the page** — Unlike a side panel that compresses the page viewport, a DevTools panel sits in its own window and doesn't affect the application under test.
-5. **Split view support** — The panel includes a resizable split view (list + detail) that works well in the wide DevTools layout.
+1. **Side Panel (Sidebar)** — Best for persistent monitoring while you interact with the page. It stays open as you browse and doesn't clutter your workspace.
+2. **DevTools Panel** — Best for deep analysis of large JSON payloads or when you need to see Network/Console logs side-by-side with API Catcher.
+
+The monitor is fully responsive, automatically adjusting its layout for narrow sidebars by hiding labels and providing horizontal scrolling for long header values.
 
 ### Security Considerations
 
@@ -135,6 +140,8 @@ A **DevTools panel** was chosen over a Side Panel for the following reasons:
 | `clipboardWrite` | Copy cURL, JSON, and Gist URLs to the clipboard |
 | `scripting` | Programmatically inject the content script into tabs |
 | `webNavigation` | Detect page navigations to inject the interceptor early |
+| `sidePanel` | Support opening the monitor in the browser's native sidebar |
+| `tabs` | Identify the active tab to bridge data to the monitor |
 | `<all_urls>` (host) | Required to inject scripts and capture requests on any site |
 
 ## License

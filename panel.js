@@ -45,6 +45,7 @@
   const detailDuration = document.getElementById('detailDuration');
   const detailTimestamp = document.getElementById('detailTimestamp');
   const detailType = document.getElementById('detailType');
+  const detailInitiator = document.getElementById('detailInitiator');
   const reqHeaders = document.getElementById('reqHeaders');
   const reqBody = document.getElementById('reqBody');
   const resHeaders = document.getElementById('resHeaders');
@@ -221,6 +222,17 @@
     detailTimestamp.textContent = entry.timestamp;
     detailType.textContent = entry.type.toUpperCase();
 
+    if (entry.initiator) {
+      detailInitiator.innerHTML = `
+        <span class="context-label">Initiated from:</span>
+        <a href="${escapeHtml(entry.initiator.url)}" target="_blank" class="context-link" title="${escapeHtml(entry.initiator.url)}">
+          ${escapeHtml(entry.initiator.title || entry.initiator.url)}
+        </a>
+      `;
+    } else {
+      detailInitiator.innerHTML = '';
+    }
+
     reqHeaders.textContent = prettyJson(entry.request?.headers);
     reqBody.textContent = prettyBody(entry.request?.body);
     resHeaders.textContent = prettyJson(entry.response?.headers);
@@ -285,7 +297,12 @@
       parts.push(`-d '${body.replace(/'/g, "'\\''")}'`);
     }
 
-    copyToClipboard(parts.join(' \\\n  '));
+    let curl = parts.join(' \\\n  ');
+    if (e.initiator) {
+      curl = `# Initiated from: ${e.initiator.title} (${e.initiator.url})\n${curl}`;
+    }
+
+    copyToClipboard(curl);
     showToast('Copied as cURL', 'success');
   });
 
@@ -320,7 +337,7 @@
       const content = JSON.stringify(sanitized, null, 2);
 
       const gistPayload = {
-        description: `API Catcher log: ${selectedEntry.method} ${truncateUrl(selectedEntry.url, 80)}`,
+        description: `API Catcher log: ${selectedEntry.method} ${truncateUrl(selectedEntry.url, 80)} (Page: ${selectedEntry.initiator?.title || 'unknown'})`,
         public: false,
         files: {
           [filename]: { content },
