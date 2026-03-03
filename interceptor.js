@@ -38,6 +38,33 @@
     window.postMessage({ type: MSG_TYPE, payload: entry }, '*');
   }
 
+  // ── Rule application ───────────────────────────────────────────────
+
+  function applyModificationRules(url, method, reqHeaders, reqBody) {
+    const rules = window.__API_CATCHER_RULES__ || [];
+    let modified = false;
+
+    for (const rule of rules) {
+      if (url.includes(rule.pattern)) {
+        if (rule.target === 'reqBody') {
+          reqBody = rule.value;
+          modified = true;
+        } else if (rule.target === 'reqHeaders') {
+          try {
+            const [name, value] = rule.value.split(/:\s*/);
+            if (name && value) {
+              reqHeaders[name] = value;
+              modified = true;
+            }
+          } catch {
+            console.error(`API Catcher: Invalid header rule value: ${rule.value}`);
+          }
+        }
+      }
+    }
+    return { reqHeaders, reqBody };
+  }
+
   // ── Fetch interception ──────────────────────────────────────────────
 
   const originalFetch = window.fetch;
@@ -53,7 +80,7 @@
     const method = (init?.method
       || (resource instanceof Request ? resource.method : 'GET')).toUpperCase();
 
-    const reqHeaders = headersToObject(
+    let reqHeaders = headersToObject(
       init?.headers || (resource instanceof Request ? resource.headers : {})
     );
 
@@ -64,11 +91,48 @@
       try { reqBody = await resource.clone().text(); } catch { /* empty */ }
     }
 
+    // Apply modification rules
+    const modified = applyModificationRules(url, method, reqHeaders, reqBody);
+    reqHeaders = modified.reqHeaders;
+    reqBody = modified.reqBody;
+
+    // Re-create the arguments for fetch
+    const newArgs = [...args];
+    const bodyAllowed = !['GET', 'HEAD'].includes(method);
+
+    if (newArgs[1]) { // if init object exists
+      newArgs[1].headers = reqHeaders;
+      if (bodyAllowed && reqBody !== null) {
+        newArgs[1].body = reqBody;
+      }
+    } else if (newArgs[0] instanceof Request) {
+        const oldRequest = newArgs[0];
+        const newRequestInit = {
+            method: oldRequest.method,
+            headers: reqHeaders,
+            mode: oldRequest.mode,
+            credentials: oldRequest.credentials,
+            cache: oldRequest.cache,
+            redirect: oldRequest.redirect,
+            referrer: oldRequest.referrer,
+            integrity: oldRequest.integrity,
+        };
+        if (bodyAllowed && reqBody !== null) {
+            newRequestInit.body = reqBody;
+        }
+        newArgs[0] = new Request(oldRequest.url, newRequestInit);
+    } else {
+        newArgs[1] = { headers: reqHeaders };
+        if (bodyAllowed && reqBody !== null) {
+            newArgs[1].body = reqBody;
+        }
+    }
+
     const timestamp = new Date().toISOString();
     const startTime = performance.now();
 
     try {
-      const response = await originalFetch.apply(this, args);
+      const response = await originalFetch.apply(this, newArgs);
       const duration = Math.round(performance.now() - startTime);
 
       const resHeaders = headersToObject(response.headers);
@@ -139,8 +203,19 @@
   XHR.prototype.send = function (body) {
     if (this.__ac) {
       const meta = this.__ac;
+
+      // Apply modification rules
+      const modified = applyModificationRules(meta.url, meta.method, meta.reqHeaders, body);
+      meta.reqHeaders = modified.reqHeaders;
+      const newBody = modified.reqBody;
+
+      // Re-apply modified headers
+      for (const name in meta.reqHeaders) {
+        originalSetRequestHeader.call(this, name, meta.reqHeaders[name]);
+      }
+
       meta.startTime = performance.now();
-      meta.reqBody = typeof body === 'string' ? body : safeStringify(body);
+      meta.reqBody = typeof newBody === 'string' ? newBody : safeStringify(newBody);
       meta.timestamp = new Date().toISOString();
 
       this.addEventListener('loadend', function () {
@@ -167,6 +242,7 @@
           response: { headers: resHeaders, body: this.responseText },
         });
       });
+      return originalSend.call(this, newBody);
     }
     return originalSend.call(this, body);
   };

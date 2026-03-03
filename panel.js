@@ -6,14 +6,17 @@
  */
 (function () {
   'use strict';
+  console.log('API Catcher: panel.js started execution.');
 
   const tabId = chrome.devtools.inspectedWindow.tabId;
+  console.log('API Catcher: Initializing panel for tabId:', tabId);
 
   // ── State ─────────────────────────────────────────────────────────
 
   let entries = [];
   let selectedEntry = null;
   let selectedRow = null;
+  let modificationRules = [];
 
   // ── DOM refs ──────────────────────────────────────────────────────
 
@@ -26,6 +29,14 @@
   const detailPanel = document.getElementById('detailPanel');
   const resizeHandle = document.getElementById('resizeHandle');
   const toast = document.getElementById('toast');
+
+  // Modification rule elements
+  const ruleUrlPattern = document.getElementById('ruleUrlPattern');
+  const ruleTarget = document.getElementById('ruleTarget');
+  const ruleValue = document.getElementById('ruleValue');
+  const btnAddRule = document.getElementById('btnAddRule');
+  const ruleList = document.getElementById('ruleList');
+  console.log('API Catcher: DOM elements for rules:', { ruleUrlPattern, ruleTarget, ruleValue, btnAddRule, ruleList });
 
   // Detail elements
   const detailMethod = document.getElementById('detailMethod');
@@ -56,6 +67,70 @@
     if (res?.logs) {
       res.logs.forEach((e) => addEntry(e, false));
       renderList();
+    }
+  });
+
+  // ── Modification Rules ──────────────────────────────────────────
+
+  function renderRuleList() {
+    console.log('API Catcher: renderRuleList called.');
+    ruleList.innerHTML = '';
+    for (const rule of modificationRules) {
+      const li = document.createElement('li');
+      li.dataset.id = rule.id;
+      li.innerHTML = `
+        <span class="rule-pattern">${rule.pattern}</span>
+        <span>&rarr;</span>
+        <span>${rule.target}</span>
+        <button class="delete-rule" title="Delete rule">&times;</button>
+      `;
+      ruleList.appendChild(li);
+    }
+  }
+
+  function addRule() {
+    const pattern = ruleUrlPattern.value.trim();
+    if (!pattern) {
+      showToast('URL pattern cannot be empty', 'error');
+      return;
+    }
+
+    const rule = {
+      id: `rule-${Date.now()}`,
+      pattern: pattern,
+      target: ruleTarget.value,
+      value: ruleValue.value,
+    };
+
+    modificationRules.push(rule);
+    chrome.runtime.sendMessage({ action: 'addModificationRule', payload: rule });
+    renderRuleList();
+
+    // Clear inputs
+    ruleUrlPattern.value = '';
+    ruleValue.value = '';
+  }
+
+  function deleteRule(id) {
+    modificationRules = modificationRules.filter(r => r.id !== id);
+    chrome.runtime.sendMessage({ action: 'deleteModificationRule', payload: id });
+    renderRuleList();
+  }
+
+  btnAddRule.addEventListener('click', addRule);
+  ruleList.addEventListener('click', (e) => {
+    if (e.target.classList.contains('delete-rule')) {
+      const id = e.target.closest('li').dataset.id;
+      deleteRule(id);
+    }
+  });
+
+  // Load existing rules
+  chrome.runtime.sendMessage({ action: 'getModificationRules' }, (res) => {
+    console.log('API Catcher: getModificationRules response received:', res);
+    if (res?.rules) {
+      modificationRules = res.rules;
+      renderRuleList();
     }
   });
 

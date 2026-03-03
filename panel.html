@@ -37,6 +37,25 @@
     </div>
   </header>
 
+  <!-- ── Modification Rules ────────────────────────────────────── -->
+  <section id="modificationPanel">
+    <h3>
+      Modification Rules
+    </h3>
+    <div id="modificationRules">
+      <div id="ruleForm">
+        <input type="text" id="ruleUrlPattern" placeholder="URL contains...">
+        <select id="ruleTarget">
+          <option value="reqBody">Request Body</option>
+          <option value="reqHeaders">Request Headers</option>
+        </select>
+        <textarea id="ruleValue" placeholder="Enter new value (JSON for body, 'Header: Value' for headers)"></textarea>
+        <button id="btnAddRule" class="btn btn-primary">Add Rule</button>
+      </div>
+      <ul id="ruleList"></ul>
+    </div>
+  </section>
+
   <!-- ── Split view: List + Detail ───────────────────────────────── -->
   <main id="splitView">
     <!-- List panel -->
