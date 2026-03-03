@@ -28,6 +28,8 @@ html, body {
   font-size: 13px;
   background: var(--bg);
   color: var(--text);
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Toolbar ───────────────────────────────────────────────────────── */
@@ -96,6 +98,84 @@ select {
   cursor: pointer;
 }
 
+/* ── Modification Rules ────────────────────────────────────────── */
+#modificationPanel {
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+#modificationPanel .section-toggle {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+#ruleForm {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#ruleUrlPattern {
+  flex: 1;
+  min-width: 150px;
+}
+
+#ruleForm input, #ruleForm textarea, #ruleForm select {
+  padding: 4px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  outline: none;
+  font-family: var(--font-mono);
+}
+
+#ruleForm textarea {
+  flex: 2;
+  resize: vertical;
+  min-height: 30px;
+  height: 30px;
+}
+
+#ruleList {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#ruleList li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+#ruleList .rule-pattern {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#ruleList .delete-rule {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--red);
+  font-weight: 700;
+  padding: 0 2px;
+}
+
+#modificationRules.collapsed {
+  display: none;
+}
+
 /* ── Buttons ───────────────────────────────────────────────────────── */
 .btn {
   padding: 4px 10px;
@@ -139,7 +219,6 @@ select {
 #splitView {
   display: flex;
   flex: 1;
-  height: calc(100vh - 40px);
   overflow: hidden;
 }
 

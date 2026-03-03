@@ -14,6 +14,9 @@
 // when the browser session ends — perfect for transient QA logs.
 
 const STORAGE_KEY = 'tabLogs';
+const RULES_KEY = 'modificationRules';
+
+// ── Log Storage ───────────────────────────────────────────────────────
 
 async function loadLogs() {
   const data = await chrome.storage.session.get(STORAGE_KEY);
@@ -22,6 +25,17 @@ async function loadLogs() {
 
 async function saveLogs(logs) {
   await chrome.storage.session.set({ [STORAGE_KEY]: logs });
+}
+
+// ── Rule Storage ──────────────────────────────────────────────────────
+
+async function loadRules() {
+  const data = await chrome.storage.local.get(RULES_KEY);
+  return data[RULES_KEY] || [];
+}
+
+async function saveRules(rules) {
+  await chrome.storage.local.set({ [RULES_KEY]: rules });
 }
 
 async function getTabLogs(tabId) {
@@ -124,6 +138,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'initPanel') {
     ensureInjected(msg.tabId);
     return;
+  }
+
+  // Modification rule handlers
+  if (msg.action === 'getModificationRules') {
+    loadRules().then(rules => sendResponse({ rules }));
+    return true;
+  }
+
+  if (msg.action === 'addModificationRule') {
+    loadRules().then(rules => {
+      rules.push(msg.payload);
+      saveRules(rules);
+    });
+    return;
+  }
+
+  if (msg.action === 'deleteModificationRule') {
+    loadRules().then(rules => {
+      const filtered = rules.filter(r => r.id !== msg.payload);
+      saveRules(filtered);
+    });
+    return;
+  }
+
+  if (msg.action === 'getRulesForContentScript') {
+    loadRules().then(rules => sendResponse({ rules }));
+    return true;
   }
 });
 
