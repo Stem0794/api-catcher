@@ -83,7 +83,6 @@ chrome.webNavigation?.onCommitted.addListener(async (details) => {
       target: { tabId: details.tabId },
       files: ['content.js'],
       injectImmediately: true,
-      world: 'MAIN', // Ensure script runs in the page's main world
     });
   } catch (e) {
     // Tab may have been closed or the URL isn't injectable
@@ -99,7 +98,6 @@ async function ensureInjected(tabId) {
       target: { tabId },
       files: ['content.js'],
       injectImmediately: true,
-      world: 'MAIN', // Ensure script runs in the page's main world
     });
   } catch (e) {
     console.error('API Catcher: Failed to inject content.js on ensureInjected:', e); // DEBUG LOG
