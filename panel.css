@@ -66,6 +66,35 @@ html, body {
   font-weight: 600;
 }
 
+.toolbar-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 8px;
+}
+
+.toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.toolbar-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.toolbar-toggle input {
+  margin: 0;
+  cursor: pointer;
+}
+
 .toolbar-right {
   display: flex;
   align-items: center;
@@ -378,6 +407,97 @@ select {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+}
+
+#detailSearch {
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+#detailSearchInput {
+  width: 100%;
+  padding: 4px 10px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  outline: none;
+}
+
+#detailSearchInput:focus {
+  border-color: var(--accent);
+}
+
+mark.highlight {
+  background: var(--yellow);
+  color: #000;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ── JSON Tree ─────────────────────────────────────────────────────── */
+.json-tree {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  user-select: text;
+}
+
+.json-tree ul {
+  list-style: none;
+  padding-left: 18px;
+  margin: 0;
+}
+
+.json-tree li {
+  margin: 3px 0;
+  position: relative;
+}
+
+.json-tree details summary {
+  cursor: pointer;
+  outline: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+}
+
+.json-tree details summary::-webkit-details-marker {
+  display: none;
+}
+
+.json-tree details summary::before {
+  content: '\25B8';
+  font-size: 10px;
+  width: 12px;
+  display: inline-block;
+  transition: transform 0.1s;
+  color: var(--text-dim);
+}
+
+.json-tree details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.json-key {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.json-value-string { color: var(--green); }
+.json-value-number { color: var(--orange); }
+.json-value-boolean { color: var(--teal); }
+.json-value-null { color: var(--red); }
+
+.json-size {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-left: 6px;
 }
 
 #detailMeta {

@@ -32,6 +32,12 @@
         <option value="5xx">5xx Server Error</option>
         <option value="0">Failed / 0</option>
       </select>
+      <div class="toolbar-separator"></div>
+      <label class="toolbar-toggle" title="Do not clear logs on page navigation">
+        <input type="checkbox" id="chkPreserveLog">
+        <span>Preserve Log</span>
+      </label>
+      <div class="toolbar-separator"></div>
       <button id="btnClear" class="btn btn-danger" title="Clear all logs">Clear</button>
       <button id="btnExportAll" class="btn btn-primary" title="Export all visible logs as JSON">Export All</button>
     </div>
@@ -75,9 +81,14 @@
         <div id="detailActions">
           <button id="btnCopyCurl" class="btn btn-sm" title="Copy as cURL command">Copy cURL</button>
           <button id="btnCopyJson" class="btn btn-sm" title="Copy entry as JSON">Copy JSON</button>
+          <button id="btnExportPostman" class="btn btn-sm" title="Export as Postman Collection">Postman</button>
+          <button id="btnExportOpenApi" class="btn btn-sm" title="Generate OpenAPI 3.0 snippet">OpenAPI</button>
           <button id="btnShareGist" class="btn btn-sm btn-primary" title="Create a secret GitHub Gist and copy link">Share via Gist</button>
           <button id="btnCloseDetail" class="btn btn-sm" title="Close detail view">&times;</button>
         </div>
+      </div>
+      <div id="detailSearch">
+        <input type="text" id="detailSearchInput" placeholder="Search in bodies..." />
       </div>
       <div id="detailMeta">
         <span id="detailStatus"></span>

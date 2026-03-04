@@ -28,6 +28,8 @@
   const statusFilter = document.getElementById('statusFilter');
   const detailPanel = document.getElementById('detailPanel');
   const resizeHandle = document.getElementById('resizeHandle');
+  const chkPreserveLog = document.getElementById('chkPreserveLog');
+  const detailSearchInput = document.getElementById('detailSearchInput');
   const toast = document.getElementById('toast');
 
   // Modification rule elements
@@ -57,7 +59,30 @@
   port.onMessage.addListener((msg) => {
     if (msg.action === 'newEntry') {
       addEntry(msg.payload);
+    } else if (msg.action === 'logsCleared') {
+      entries = [];
+      selectedEntry = null;
+      selectedRow = null;
+      detailPanel.classList.add('hidden');
+      resizeHandle.style.display = 'none';
+      renderList();
     }
+  });
+
+  // Load existing settings
+  chrome.runtime.sendMessage({ action: 'getSettings' }, (settings) => {
+    if (settings) {
+      chkPreserveLog.checked = settings.preserveLog;
+    }
+  });
+
+  // Update settings on change
+  chkPreserveLog.addEventListener('change', () => {
+    chrome.storage.local.get('settings', (data) => {
+      const settings = data.settings || { preserveLog: false };
+      settings.preserveLog = chkPreserveLog.checked;
+      chrome.storage.local.set({ settings });
+    });
   });
 
   // Ask background to inject content script if not already
@@ -211,6 +236,7 @@
 
     detailPanel.classList.remove('hidden');
     resizeHandle.style.display = 'block';
+    detailSearchInput.value = ''; // Clear search on new entry
 
     detailMethod.textContent = entry.method;
     detailMethod.className = `method-badge method-${entry.method}`;
@@ -233,11 +259,62 @@
       detailInitiator.innerHTML = '';
     }
 
-    reqHeaders.textContent = prettyJson(entry.request?.headers);
-    reqBody.textContent = prettyBody(entry.request?.body);
-    resHeaders.textContent = prettyJson(entry.response?.headers);
-    resBody.textContent = prettyBody(entry.response?.body);
+    renderDetailBodies();
   }
+
+  function renderDetailBodies() {
+    const entry = selectedEntry;
+    if (!entry) return;
+
+    renderJsonTree(entry.request?.headers, reqHeaders);
+
+    const rBody = entry.request?.body;
+    try {
+      const parsed = JSON.parse(rBody);
+      renderJsonTree(parsed, reqBody);
+    } catch {
+      reqBody.textContent = prettyBody(rBody);
+      reqBody.classList.remove('json-tree');
+    }
+
+    renderJsonTree(entry.response?.headers, resHeaders);
+
+    const rsBody = entry.response?.body;
+    try {
+      const parsed = JSON.parse(rsBody);
+      renderJsonTree(parsed, resBody);
+    } catch {
+      resBody.textContent = prettyBody(rsBody);
+      resBody.classList.remove('json-tree');
+    }
+
+    applySearchHighlighting();
+  }
+
+  function applySearchHighlighting() {
+    const query = detailSearchInput.value.toLowerCase().trim();
+    if (!query) return;
+
+    [reqHeaders, reqBody, resHeaders, resBody].forEach((el) => {
+      highlightElementText(el, query);
+    });
+  }
+
+  function highlightElementText(el, query) {
+    const text = el.textContent;
+    if (!text || text === '(empty)') return;
+
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+
+    el.innerHTML = parts
+      .map((part) =>
+        regex.test(part) ? `<mark class="highlight">${escapeHtml(part)}</mark>` : escapeHtml(part)
+      )
+      .join('');
+  }
+
+  detailSearchInput.addEventListener('input', renderDetailBodies);
 
   document.getElementById('btnCloseDetail').addEventListener('click', () => {
     detailPanel.classList.add('hidden');
@@ -313,6 +390,147 @@
     copyToClipboard(JSON.stringify(selectedEntry, null, 2));
     showToast('Copied as JSON', 'success');
   });
+
+  // ── Export to Postman ────────────────────────────────────────────
+
+  document.getElementById('btnExportPostman').addEventListener('click', () => {
+    if (!selectedEntry) return;
+    const collection = convertToPostman([selectedEntry]);
+    const filename = `api-catcher-postman-${Date.now()}.json`;
+    downloadFile(filename, JSON.stringify(collection, null, 2));
+    showToast('Postman Collection exported', 'success');
+  });
+
+  function convertToPostman(entries) {
+    return {
+      info: {
+        name: 'API Catcher Export',
+        schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
+      },
+      item: entries.map((e) => {
+        const urlObj = new URL(e.url);
+        return {
+          name: `${e.method} ${truncateUrl(e.url, 50)}`,
+          request: {
+            method: e.method,
+            header: Object.entries(e.request?.headers || {}).map(([key, value]) => ({
+              key,
+              value,
+            })),
+            url: {
+              raw: e.url,
+              protocol: urlObj.protocol.replace(':', ''),
+              host: urlObj.hostname.split('.'),
+              path: urlObj.pathname.split('/').filter((p) => p),
+              query: Array.from(urlObj.searchParams.entries()).map(([key, value]) => ({
+                key,
+                value,
+              })),
+            },
+            body: e.request?.body
+              ? {
+                  mode: 'raw',
+                  raw: e.request.body,
+                }
+              : undefined,
+          },
+        };
+      }),
+    };
+  }
+
+  function downloadFile(filename, content) {
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Export to OpenAPI ───────────────────────────────────────────
+
+  document.getElementById('btnExportOpenApi').addEventListener('click', () => {
+    if (!selectedEntry) return;
+    const spec = convertToOpenApi(selectedEntry);
+    const filename = `api-catcher-openapi-${Date.now()}.json`;
+    downloadFile(filename, JSON.stringify(spec, null, 2));
+    showToast('OpenAPI snippet exported', 'success');
+  });
+
+  function convertToOpenApi(e) {
+    const urlObj = new URL(e.url);
+    const path = urlObj.pathname;
+
+    const spec = {
+      openapi: '3.0.3',
+      info: {
+        title: 'API Catcher Export',
+        version: '1.0.0',
+      },
+      paths: {
+        [path]: {
+          [e.method.toLowerCase()]: {
+            summary: `Exported ${e.method} request`,
+            responses: {
+              [e.status || '200']: {
+                description: e.statusText || 'Successful response',
+                content: {
+                  'application/json': {
+                    schema: inferSchema(e.response?.body),
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    if (e.request?.body) {
+      spec.paths[path][e.method.toLowerCase()].requestBody = {
+        content: {
+          'application/json': {
+            schema: inferSchema(e.request.body),
+          },
+        },
+      };
+    }
+
+    return spec;
+  }
+
+  function inferSchema(body) {
+    if (!body) return { type: 'string' };
+    try {
+      const data = typeof body === 'string' ? JSON.parse(body) : body;
+      return generateSchema(data);
+    } catch {
+      return { type: 'string', example: String(body).slice(0, 100) };
+    }
+  }
+
+  function generateSchema(val) {
+    const type = typeof val;
+    if (val === null) return { type: 'string', nullable: true };
+    if (Array.isArray(val)) {
+      return {
+        type: 'array',
+        items: val.length > 0 ? generateSchema(val[0]) : {},
+      };
+    }
+    if (type === 'object') {
+      const properties = {};
+      Object.keys(val).forEach((k) => {
+        properties[k] = generateSchema(val[k]);
+      });
+      return { type: 'object', properties };
+    }
+    return { type, example: val };
+  }
 
   // ── Share via GitHub Gist ─────────────────────────────────────────
 
@@ -480,5 +698,60 @@
     toast._timer = setTimeout(() => {
       toast.classList.add('hidden');
     }, 3500);
+  }
+
+  function renderJsonTree(data, container) {
+    container.innerHTML = '';
+    container.classList.add('json-tree');
+
+    if (data === null || data === undefined || (typeof data === 'object' && Object.keys(data).length === 0)) {
+      container.textContent = '(empty)';
+      return;
+    }
+
+    function createNode(key, value) {
+      const li = document.createElement('li');
+
+      if (typeof value === 'object' && value !== null) {
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        const isArray = Array.isArray(value);
+        const keys = Object.keys(value);
+
+        summary.innerHTML = `<span class="json-key">${escapeHtml(key)}</span>: ${isArray ? '[' : '{'}<span class="json-size">${keys.length} items</span>${isArray ? ']' : '}'}`;
+        details.appendChild(summary);
+
+        const ul = document.createElement('ul');
+        keys.forEach(k => {
+          ul.appendChild(createNode(isArray ? '' : k, value[k]));
+        });
+        details.appendChild(ul);
+        li.appendChild(details);
+      } else {
+        const type = typeof value;
+        let displayValue = value;
+        let typeClass = `json-value-${type}`;
+
+        if (type === 'string') {
+          displayValue = `"${escapeHtml(value)}"`;
+        } else if (value === null) {
+          displayValue = 'null';
+          typeClass = 'json-value-null';
+        }
+
+        li.innerHTML = `${key ? `<span class="json-key">${escapeHtml(key)}</span>: ` : ''}<span class="${typeClass}">${displayValue}</span>`;
+      }
+      return li;
+    }
+
+    const rootUl = document.createElement('ul');
+    if (typeof data === 'object' && data !== null) {
+      Object.keys(data).forEach(k => {
+        rootUl.appendChild(createNode(k, data[k]));
+      });
+    } else {
+      rootUl.appendChild(createNode('value', data));
+    }
+    container.appendChild(rootUl);
   }
 })();

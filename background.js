@@ -14,6 +14,26 @@
 // when the browser session ends — perfect for transient QA logs.
 
 const STORAGE_KEY = 'tabLogs';
+const SETTINGS_KEY = 'settings';
+
+let settings = { preserveLog: false };
+
+// ── Settings management ───────────────────────────────────────────────
+
+async function loadSettings() {
+  const data = await chrome.storage.local.get(SETTINGS_KEY);
+  if (data[SETTINGS_KEY]) {
+    settings = data[SETTINGS_KEY];
+  }
+}
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes[SETTINGS_KEY]) {
+    settings = changes[SETTINGS_KEY].newValue;
+  }
+});
+
+loadSettings();
 
 // ── Log Storage ───────────────────────────────────────────────────────
 
@@ -76,6 +96,13 @@ chrome.webNavigation?.onCommitted.addListener(async (details) => {
   const url = details.url || '';
   if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:') || url.startsWith('devtools://')) return;
 
+  // Clear logs on navigation if preserveLog is false
+  if (!settings.preserveLog) {
+    await clearTabLogs(details.tabId);
+    broadcastToPanel(details.tabId, { action: 'logsCleared' });
+    broadcastToPopup(details.tabId, { action: 'logsCleared' });
+  }
+
   try {
     await chrome.scripting.executeScript({
       target: { tabId: details.tabId },
@@ -132,6 +159,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'initPanel') {
     ensureInjected(msg.tabId);
     return;
+  }
+
+  if (msg.action === 'getSettings') {
+    sendResponse(settings);
+    return true;
   }
 });
 
