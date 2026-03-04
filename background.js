@@ -8,13 +8,13 @@
  * - Deduplicates entries by ID to prevent double-logging.
  */
 'use strict';
+console.log('API Catcher: background.js (service worker) started.'); // DEBUG LOG
 
 // ── Storage helpers ───────────────────────────────────────────────────
 // chrome.storage.session survives service worker restarts but clears
 // when the browser session ends — perfect for transient QA logs.
 
 const STORAGE_KEY = 'tabLogs';
-const RULES_KEY = 'modificationRules';
 
 // ── Log Storage ───────────────────────────────────────────────────────
 
@@ -25,17 +25,6 @@ async function loadLogs() {
 
 async function saveLogs(logs) {
   await chrome.storage.session.set({ [STORAGE_KEY]: logs });
-}
-
-// ── Rule Storage ──────────────────────────────────────────────────────
-
-async function loadRules() {
-  const data = await chrome.storage.local.get(RULES_KEY);
-  return data[RULES_KEY] || [];
-}
-
-async function saveRules(rules) {
-  await chrome.storage.local.set({ [RULES_KEY]: rules });
 }
 
 async function getTabLogs(tabId) {
@@ -75,35 +64,45 @@ chrome.storage.session.setAccessLevel?.({
   accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS',
 }).catch(() => {});
 
+// ── Side panel configuration ──────────────────────────────────────────
+
+if (chrome.sidePanel) {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+}
+
 // ── Content-script injection on navigation ────────────────────────────
 
 chrome.webNavigation?.onCommitted.addListener(async (details) => {
   if (details.frameId !== 0) return;
   const url = details.url || '';
-  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:')) return;
+  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:') || url.startsWith('devtools://')) return;
+  console.log('API Catcher: background.js injecting content.js into', url); // DEBUG LOG
 
   try {
     await chrome.scripting.executeScript({
       target: { tabId: details.tabId },
       files: ['content.js'],
       injectImmediately: true,
+      world: 'MAIN', // Ensure script runs in the page's main world
     });
-  } catch {
+  } catch (e) {
     // Tab may have been closed or the URL isn't injectable
+    console.error('API Catcher: Failed to inject content.js on committed:', e); // DEBUG LOG
   }
 });
 
 async function ensureInjected(tabId) {
   try {
     const url = (await chrome.tabs.get(tabId))?.url || '';
-    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:')) return;
+    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:') || url.startsWith('devtools://')) return; // ADDED devtools://
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
       injectImmediately: true,
+      world: 'MAIN', // Ensure script runs in the page's main world
     });
-  } catch {
-    // Ignore
+  } catch (e) {
+    console.error('API Catcher: Failed to inject content.js on ensureInjected:', e); // DEBUG LOG
   }
 }
 
@@ -138,33 +137,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'initPanel') {
     ensureInjected(msg.tabId);
     return;
-  }
-
-  // Modification rule handlers
-  if (msg.action === 'getModificationRules') {
-    loadRules().then(rules => sendResponse({ rules }));
-    return true;
-  }
-
-  if (msg.action === 'addModificationRule') {
-    loadRules().then(rules => {
-      rules.push(msg.payload);
-      saveRules(rules);
-    });
-    return;
-  }
-
-  if (msg.action === 'deleteModificationRule') {
-    loadRules().then(rules => {
-      const filtered = rules.filter(r => r.id !== msg.payload);
-      saveRules(filtered);
-    });
-    return;
-  }
-
-  if (msg.action === 'getRulesForContentScript') {
-    loadRules().then(rules => sendResponse({ rules }));
-    return true;
   }
 });
 

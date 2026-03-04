@@ -6,6 +6,7 @@
  */
 (function () {
   'use strict';
+  console.log('API Catcher: interceptor.js injected.'); // DEBUG LOG
 
   if (window.__apiCatcherInjected) return;
   window.__apiCatcherInjected = true;
@@ -35,34 +36,8 @@
   }
 
   function post(entry) {
+    console.log('API Catcher: interceptor.js captured API call:', entry); // DEBUG LOG
     window.postMessage({ type: MSG_TYPE, payload: entry }, '*');
-  }
-
-  // ── Rule application ───────────────────────────────────────────────
-
-  function applyModificationRules(url, method, reqHeaders, reqBody) {
-    const rules = window.__API_CATCHER_RULES__ || [];
-    let modified = false;
-
-    for (const rule of rules) {
-      if (url.includes(rule.pattern)) {
-        if (rule.target === 'reqBody') {
-          reqBody = rule.value;
-          modified = true;
-        } else if (rule.target === 'reqHeaders') {
-          try {
-            const [name, value] = rule.value.split(/:\s*/);
-            if (name && value) {
-              reqHeaders[name] = value;
-              modified = true;
-            }
-          } catch {
-            console.error(`API Catcher: Invalid header rule value: ${rule.value}`);
-          }
-        }
-      }
-    }
-    return { reqHeaders, reqBody };
   }
 
   // ── Fetch interception ──────────────────────────────────────────────
@@ -70,6 +45,7 @@
   const originalFetch = window.fetch;
 
   window.fetch = async function (...args) {
+    console.log('API Catcher: window.fetch called.'); // DEBUG LOG
     const [resource, init] = args;
     const url = typeof resource === 'string'
       ? resource
@@ -91,10 +67,7 @@
       try { reqBody = await resource.clone().text(); } catch { /* empty */ }
     }
 
-    // Apply modification rules
-    const modified = applyModificationRules(url, method, reqHeaders, reqBody);
-    reqHeaders = modified.reqHeaders;
-    reqBody = modified.reqBody;
+    // No modification rules applied
 
     // Re-create the arguments for fetch
     const newArgs = [...args];
@@ -130,6 +103,10 @@
 
     const timestamp = new Date().toISOString();
     const startTime = performance.now();
+    const initiator = {
+      url: window.location.href,
+      title: document.title,
+    };
 
     try {
       const response = await originalFetch.apply(this, newArgs);
@@ -152,6 +129,7 @@
         statusText: response.statusText,
         timestamp,
         duration,
+        initiator,
         request: { headers: reqHeaders, body: reqBody },
         response: { headers: resHeaders, body: resBody },
       });
@@ -168,6 +146,7 @@
         statusText: 'Network Error',
         timestamp,
         duration,
+        initiator,
         request: { headers: reqHeaders, body: reqBody },
         response: { headers: {}, body: null },
         error: err.message,
@@ -201,13 +180,12 @@
   };
 
   XHR.prototype.send = function (body) {
+    console.log('API Catcher: XHR.send called.'); // DEBUG LOG
     if (this.__ac) {
       const meta = this.__ac;
 
-      // Apply modification rules
-      const modified = applyModificationRules(meta.url, meta.method, meta.reqHeaders, body);
-      meta.reqHeaders = modified.reqHeaders;
-      const newBody = modified.reqBody;
+      // No modification rules applied
+      const newBody = body; // Use original body
 
       // Re-apply modified headers
       for (const name in meta.reqHeaders) {
@@ -217,6 +195,10 @@
       meta.startTime = performance.now();
       meta.reqBody = typeof newBody === 'string' ? newBody : safeStringify(newBody);
       meta.timestamp = new Date().toISOString();
+      meta.initiator = {
+        url: window.location.href,
+        title: document.title,
+      };
 
       this.addEventListener('loadend', function () {
         const duration = Math.round(performance.now() - meta.startTime);
@@ -238,6 +220,7 @@
           statusText: this.statusText,
           timestamp: meta.timestamp,
           duration,
+          initiator: meta.initiator,
           request: { headers: meta.reqHeaders, body: meta.reqBody },
           response: { headers: resHeaders, body: this.responseText },
         });

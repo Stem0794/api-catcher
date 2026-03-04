@@ -9,7 +9,8 @@
     "scripting",
     "webNavigation",
     "activeTab",
-    "tabs"
+    "tabs",
+    "sidePanel"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -19,6 +20,9 @@
       "128": "icons/icon128.png"
     },
     "default_title": "API Catcher"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
   },
   "host_permissions": [
     "<all_urls>"
