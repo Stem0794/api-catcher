@@ -4,14 +4,14 @@ A Manifest V3 Chrome extension for QA testers to monitor, log, and securely shar
 
 ## Features
 
-- **Network Interception** — Captures all XHR and Fetch requests with full details (method, URL, status, headers, body, timing)
-- **Side Panel Support** — Opens in the browser's native side panel (sidebar) for persistent, easy access while browsing
-- **Responsive Layout** — Optimized for any width, with auto-hiding labels and horizontal scrolling for long headers
-- **Initiator Context** — Tracks the page URL and title where each request originated, identifying the exact source of every API call
-- **DevTools Panel** — Clean, dark-themed UI integrated into Chrome DevTools with filtering, color-coded statuses, and a resizable split view
-- **Copy as cURL / JSON** — One-click export of any request for debugging or sharing
-- **GitHub Gist Sharing** — Create a secret Gist from any captured request and auto-copy the shareable link
-- **Options Page** — Securely store your GitHub PAT via `chrome.storage.local`
+- **Network Interception** — Captures all XHR and Fetch requests with full details (method, URL, status, headers, body, timing).
+- **Multiple Views** — Use the **Toolbar Popup**, the browser's native **Side Panel**, or a dedicated **DevTools Panel**.
+- **Auto-Redaction Sanitizer** — Automatically redacts sensitive keys (e.g., `Authorization`, `token`, `password`) from logs before they are shared.
+- **Log Persistence** — Logs are stored per-tab in `chrome.storage.session` and survive service worker restarts or popup closes.
+- **Initiator Context** — Tracks the page URL and title where each request originated.
+- **Copy & Export** — One-click export as **cURL**, **JSON**, or a full list export.
+- **GitHub Gist Sharing** — Create a secret, sanitized Gist from any request and auto-copy the link.
+- **Dark Theme** — Clean, modern dark UI across all extension views.
 
 ## Project Structure
 
@@ -21,11 +21,15 @@ api-catcher/
 ├── background.js          # Service worker: manages per-tab logs, injects content scripts
 ├── content.js             # Content script: bridges page world ↔ extension
 ├── interceptor.js         # Injected into page context: monkey-patches fetch/XHR
+├── sanitizer.js           # Shared utility: auto-redacts sensitive data from logs
 ├── devtools.html          # DevTools entry point
 ├── devtools.js            # Registers the "API Catcher" DevTools panel
-├── panel.html             # Main panel UI (list + detail views)
+├── panel.html             # Main panel UI (Shared between side panel and DevTools)
 ├── panel.css              # Panel styles (dark theme)
-├── panel.js               # Panel logic: filtering, detail view, clipboard, Gist sharing
+├── panel.js               # Panel logic
+├── popup.html             # Toolbar popup dashboard UI
+├── popup.css              # Popup styles
+├── popup.js               # Popup logic
 ├── options.html           # Settings page UI
 ├── options.js             # Settings page logic (PAT management)
 ├── icons/
@@ -43,106 +47,32 @@ api-catcher/
 2. Open Chrome and navigate to `chrome://extensions/`.
 3. Enable **Developer mode** using the toggle in the top-right corner.
 4. Click **"Load unpacked"** and select the `api-catcher/` directory.
-5. The extension will appear in your extensions list with the name **"API Catcher"**.
 
-### 2. Open the Monitor
+### 2. Configure GitHub PAT (Optional, for Gist Sharing)
 
-1. Navigate to any website (e.g., `https://jsonplaceholder.typicode.com`).
-2. **Click the API Catcher icon** in your extensions bar — this opens the **Side Panel** (sidebar) to start monitoring immediately.
-3. Alternatively, open **Chrome DevTools** (`F12` or `Ctrl+Shift+I` / `Cmd+Option+I`) and look for the **"API Catcher"** tab.
-4. Interact with the page — any XHR or Fetch calls will appear in real time in both the monitor window and DevTools.
-
-### 3. Configure GitHub PAT (for Gist Sharing)
-
-1. Right-click the API Catcher extension icon → **"Options"**, or go to `chrome://extensions/` → API Catcher → **"Details"** → **"Extension options"**.
-2. Enter your GitHub Personal Access Token and click **Save Token**.
-
-#### Required GitHub PAT Scopes
-
-| Token Type | Required Scope |
-|---|---|
-| **Classic token** | Select only the **`gist`** scope |
-| **Fine-grained token** | Under **Account permissions**, set **Gists** to **Read and write** |
-
-**To generate a token:**
-
-1. Go to [GitHub → Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens).
-2. Click **"Generate new token"**.
-3. Select the scope as described above.
-4. Set an expiration that suits your workflow.
-5. Click **"Generate token"**, copy it, and paste it into the API Catcher Options page.
+1. Right-click the API Catcher icon → **Options**.
+2. Enter your GitHub Personal Access Token (PAT) with the `gist` scope.
+3. Click **Save Token**.
 
 ## Usage
 
-### Viewing Requests
+### Monitoring API Calls
 
-- Click the **API Catcher icon** to open the **Side Panel** (sidebar).
-- Open the **API Catcher** tab in DevTools for a wider view.
-- Both views automatically follow your active tab as you browse.
-- All XHR and Fetch requests from the inspected page will stream in automatically.
-- Use the **filter bar** to search by URL or method.
-- Use the **Method** and **Status** dropdowns to narrow results.
-- Click any row to open the **Detail View**.
+- **Toolbar Popup**: Click the API Catcher icon for a quick, compact dashboard.
+- **Side Panel**: Right-click the extension icon and select "Open Side Panel" (or click the icon if configured as default) for a persistent view.
+- **DevTools**: Open Chrome DevTools and select the **API Catcher** tab for a wide-screen view.
 
-### Detail View
+### Detail View & Sharing
 
-The detail panel shows:
-- Full URL with method badge
-- Status code, duration, and timestamp
-- **Initiator Context** — The page title and URL where the request originated
-- Collapsible sections for **Request Headers**, **Request Body**, **Response Headers**, and **Response Body**
-- JSON payloads are automatically pretty-printed
+- Click any request in the list to see full headers and bodies.
+- Use the **cURL** or **JSON** buttons to copy data.
+- Click **Share Gist** to upload a sanitized version of the log to GitHub Gists.
 
-### Sharing
+## Privacy & Security
 
-| Action | Description |
-|---|---|
-| **Copy cURL** | Copies the selected request as a ready-to-paste `curl` command |
-| **Copy JSON** | Copies the full request/response entry as formatted JSON |
-| **Share via Gist** | Creates a **secret** GitHub Gist with the entry JSON and copies the Gist URL to your clipboard |
-| **Export All** | Copies all currently visible (filtered) logs as a JSON array |
-
-### Color Coding
-
-| Status Range | Color |
-|---|---|
-| `2xx` | Green |
-| `3xx` | Yellow |
-| `4xx` | Orange |
-| `5xx` | Red |
-| `0` (network error) | Red |
-
-Methods are also color-coded: GET (blue), POST (green), PUT (yellow), PATCH (orange), DELETE (red).
-
-## Architecture Decisions
-
-### Why a DevTools Panel and a Side Panel?
-
-API Catcher provides both for maximum flexibility:
-
-1. **Side Panel (Sidebar)** — Best for persistent monitoring while you interact with the page. It stays open as you browse and doesn't clutter your workspace.
-2. **DevTools Panel** — Best for deep analysis of large JSON payloads or when you need to see Network/Console logs side-by-side with API Catcher.
-
-The monitor is fully responsive, automatically adjusting its layout for narrow sidebars by hiding labels and providing horizontal scrolling for long header values.
-
-### Security Considerations
-
-- The GitHub PAT is stored in `chrome.storage.local`, which is encrypted at rest by Chrome and is only accessible to this extension.
-- The PAT is never exposed in the UI (it's masked after saving).
-- Gists are created as **secret** (unlisted) — they are not indexed by search engines but are accessible to anyone with the link.
-- The interceptor script runs in the page's MAIN world (required to monkey-patch `fetch`/`XHR`), but communication back to the extension goes through `window.postMessage` with a unique message type.
-
-## Permissions Explained
-
-| Permission | Reason |
-|---|---|
-| `storage` | Store the GitHub PAT and user preferences |
-| `clipboardWrite` | Copy cURL, JSON, and Gist URLs to the clipboard |
-| `scripting` | Programmatically inject the content script into tabs |
-| `webNavigation` | Detect page navigations to inject the interceptor early |
-| `sidePanel` | Support opening the monitor in the browser's native sidebar |
-| `tabs` | Identify the active tab to bridge data to the monitor |
-| `<all_urls>` (host) | Required to inject scripts and capture requests on any site |
+- **Local Storage**: All captured logs are stored in `chrome.storage.session` (in-memory) and are cleared when you close the browser.
+- **PAT Encryption**: Your GitHub PAT is stored in `chrome.storage.local`, only accessible to the extension.
+- **Auto-Redaction**: Before any data is shared via Gist, the extension recursively scans the payload and redacts common sensitive keys (e.g., `access_token`, `apiKey`, `cookie`).
 
 ## License
 

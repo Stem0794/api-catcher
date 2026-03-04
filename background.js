@@ -8,7 +8,6 @@
  * - Deduplicates entries by ID to prevent double-logging.
  */
 'use strict';
-console.log('API Catcher: background.js (service worker) started.'); // DEBUG LOG
 
 // ── Storage helpers ───────────────────────────────────────────────────
 // chrome.storage.session survives service worker restarts but clears
@@ -76,7 +75,6 @@ chrome.webNavigation?.onCommitted.addListener(async (details) => {
   if (details.frameId !== 0) return;
   const url = details.url || '';
   if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:') || url.startsWith('devtools://')) return;
-  console.log('API Catcher: background.js injecting content.js into', url); // DEBUG LOG
 
   try {
     await chrome.scripting.executeScript({
@@ -86,21 +84,20 @@ chrome.webNavigation?.onCommitted.addListener(async (details) => {
     });
   } catch (e) {
     // Tab may have been closed or the URL isn't injectable
-    console.error('API Catcher: Failed to inject content.js on committed:', e); // DEBUG LOG
   }
 });
 
 async function ensureInjected(tabId) {
   try {
     const url = (await chrome.tabs.get(tabId))?.url || '';
-    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:') || url.startsWith('devtools://')) return; // ADDED devtools://
+    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:') || url.startsWith('devtools://')) return;
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
       injectImmediately: true,
     });
   } catch (e) {
-    console.error('API Catcher: Failed to inject content.js on ensureInjected:', e); // DEBUG LOG
+    // Ignore
   }
 }
 

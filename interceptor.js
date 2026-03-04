@@ -6,7 +6,6 @@
  */
 (function () {
   'use strict';
-  console.log('API Catcher: interceptor.js injected.'); // DEBUG LOG
 
   if (window.__apiCatcherInjected) return;
   window.__apiCatcherInjected = true;
@@ -36,7 +35,6 @@
   }
 
   function post(entry) {
-    console.log('API Catcher: interceptor.js captured API call:', entry); // DEBUG LOG
     window.postMessage({ type: MSG_TYPE, payload: entry }, '*');
   }
 
@@ -45,7 +43,6 @@
   const originalFetch = window.fetch;
 
   window.fetch = async function (...args) {
-    console.log('API Catcher: window.fetch called.'); // DEBUG LOG
     const [resource, init] = args;
     const url = typeof resource === 'string'
       ? resource
@@ -180,7 +177,6 @@
   };
 
   XHR.prototype.send = function (body) {
-    console.log('API Catcher: XHR.send called.'); // DEBUG LOG
     if (this.__ac) {
       const meta = this.__ac;
 
