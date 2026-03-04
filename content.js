@@ -18,10 +18,20 @@
   window.__apiCatcherContentInjected = true;
 
   // Inject the interceptor script
+  console.log('API Catcher: Creating interceptor script tag...'); // DEBUG LOG
   const interceptorScript = document.createElement('script');
   interceptorScript.src = chrome.runtime.getURL('interceptor.js');
-  interceptorScript.onload = () => interceptorScript.remove();
+  console.log('API Catcher: Interceptor URL:', interceptorScript.src); // DEBUG LOG
+  interceptorScript.onload = () => {
+    console.log('API Catcher: interceptor.js loaded and executed.'); // DEBUG LOG
+    interceptorScript.remove();
+  };
+  interceptorScript.onerror = (e) => {
+    console.error('API Catcher: Failed to load interceptor.js:', e); // DEBUG LOG
+  };
+  console.log('API Catcher: Appending interceptor script to DOM...'); // DEBUG LOG
   (document.head || document.documentElement).appendChild(interceptorScript);
+  console.log('API Catcher: Interceptor script appended.'); // DEBUG LOG
 
   // Relay captured API calls from the page to the service worker
   window.addEventListener('message', (event) => {
